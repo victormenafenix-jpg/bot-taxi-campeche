@@ -10,7 +10,24 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 const db = new Database("taxi_notificaciones.db");
 
-app.use(express.urlencoded({ extended: true }));
+
+    
+    // Crear tablas si no existen (para Render.com)
+    db.exec(\
+        CREATE TABLE IF NOT EXISTS servicios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario TEXT NOT NULL,
+            origen TEXT,
+            destino TEXT,
+            precio REAL,
+            confirmado INTEGER DEFAULT 0,
+            fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    \);
+    
+    // Aquí puedes agregar más CREATE TABLE IF NOT EXISTS para otras tablas
+    console.log('✅ Tablas verificadas/creadas');
+    app.use(express.urlencoded({ extended: true }));
 
 // Estados del usuario
 const userStates = new Map();
@@ -202,4 +219,5 @@ app.listen(PORT, () => {
     console.log("👉 Envia 'hola' al bot para probar");
     console.log("=".repeat(60));
 });
+
 
