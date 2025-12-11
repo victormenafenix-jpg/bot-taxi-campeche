@@ -1,14 +1,17 @@
 ﻿{
-  "name": "bot-taxi-campeche",
+  "name": "taxi-campeche-bot",
   "version": "1.0.0",
-  "description": "Bot WhatsApp para Taxis en Campeche",
-  "main": "bot_final_corregido.js",
+  "description": "Bot de WhatsApp para servicio de taxis en Campeche",
+  "main": "bot_seguro.js",
   "scripts": {
-    "start": "node bot_final_corregido.js"
+    "start": "node bot_seguro.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "twilio": "^4.19.0",
     "better-sqlite3": "^9.0.0"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
