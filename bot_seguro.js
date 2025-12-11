@@ -9,28 +9,6 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 const db = new Database("taxi_notificaciones.db");
-    
-    // CREAR TABLA servicios SI NO EXISTE (FIX PARA RENDER)
-    try {
-        // CREAR TABLA servicios COMPLETA
-db.exec(\
-    CREATE TABLE IF NOT EXISTS servicios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        usuario TEXT NOT NULL,
-        cliente_nombre TEXT,
-        telefono TEXT,
-        origen TEXT,
-        destino TEXT,
-        precio REAL,
-        confirmado INTEGER DEFAULT 0,
-        fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-\);
-        console.log('✅ Tabla servicios verificada/creada');
-    } catch (error) {
-        console.log('⚠️ Error creando tabla:', error.message);
-    }
-    
 
 app.use(express.urlencoded({ extended: true }));
 
@@ -224,7 +202,4 @@ app.listen(PORT, () => {
     console.log("👉 Envia 'hola' al bot para probar");
     console.log("=".repeat(60));
 });
-
-
-
 
