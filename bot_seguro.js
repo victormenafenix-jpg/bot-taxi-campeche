@@ -9,6 +9,17 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 const db = new Database("taxi_notificaciones.db");
+// ==== CREAR TABLAS SI NO EXISTEN (OBLIGATORIO PARA RENDER) ====
+db.exec("CREATE TABLE IF NOT EXISTS servicios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario TEXT NOT NULL,
+    origen TEXT,
+    destino TEXT,
+    precio REAL,
+    confirmado INTEGER DEFAULT 0,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)");
+console.log("✅ Tabla 'servicios' lista para usar");
 
 app.use(express.urlencoded({ extended: true }));
 
@@ -202,4 +213,5 @@ app.listen(PORT, () => {
     console.log("👉 Envia 'hola' al bot para probar");
     console.log("=".repeat(60));
 });
+
 
