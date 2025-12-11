@@ -1,4 +1,4 @@
-﻿// bot_final_corregido.js - VERSIÓN CORREGIDA Y FUNCIONAL
+﻿// bot_con_notificaciones.js - CON NOTIFICACIONES A TAXISTAS
 const express = require("express");
 const twilio = require("twilio");
 const Database = require("better-sqlite3");
@@ -9,24 +9,28 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 const db = new Database("taxi_notificaciones.db");
-// ==== CREAR TABLAS SI NO EXISTEN (OBLIGATORIO PARA RENDER) ====
+
+// ==== CREACIÓN DE TABLA servicios (PARA RENDER) ====
 db.exec("CREATE TABLE IF NOT EXISTS servicios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     usuario TEXT NOT NULL,
+    cliente_nombre TEXT,
+    telefono TEXT,
     origen TEXT,
     destino TEXT,
     precio REAL,
     confirmado INTEGER DEFAULT 0,
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )");
-console.log("✅ Tabla 'servicios' lista para usar");
+console.log("✅ Tabla 'servicios' lista");
 
 app.use(express.urlencoded({ extended: true }));
 
 // Estados del usuario
 const userStates = new Map();
 
-// Función para enviar mensajes WhatsApp
+// ========== FUNCIONES ==========
+// 1. Enviar mensajes WhatsApp
 async function enviarWhatsApp(to, message) {
     try {
         await client.messages.create({
@@ -42,7 +46,7 @@ async function enviarWhatsApp(to, message) {
     }
 }
 
-// Guardar viaje en BD
+// 2. Guardar viaje en BD
 function guardarViajeBD(clienteNumero, origen, destinoTexto) {
     const esAeropuerto = destinoTexto.toLowerCase().includes("aeropuerto");
     const precio = esAeropuerto ? 95 : 50;
@@ -65,7 +69,52 @@ function guardarViajeBD(clienteNumero, origen, destinoTexto) {
     return { id: info.lastInsertRowid, precio };
 }
 
-// Webhook principal
+// 3. NOTIFICAR A TAXISTAS (NUEVA FUNCIÓN)
+async function notificarTaxistas(viajeId, destino, precio) {
+    try {
+        console.log(`[NOTIFICANDO] Taxistas sobre viaje #${viajeId}...`);
+        
+        // Buscar taxistas disponibles
+        const taxistas = db.prepare(
+            "SELECT telefono, nombre FROM taxistas WHERE estado IN ('disponible', 'activo')"
+        ).all();
+        
+        if (taxistas.length === 0) {
+            console.log("[AVISO] No hay taxistas disponibles");
+            return;
+        }
+        
+        console.log(`[ENCONTRADOS] ${taxistas.length} taxistas`);
+        
+        for (const taxista of taxistas) {
+            try {
+                // Formatear teléfono para WhatsApp
+                let telefonoWhatsApp = taxista.telefono;
+                if (!telefonoWhatsApp.startsWith("whatsapp:")) {
+                    telefonoWhatsApp = `whatsapp:${telefonoWhatsApp}`;
+                }
+                
+                await client.messages.create({
+                    body: `🚕 NUEVO VIAJE #${viajeId}\nDestino: ${destino}\nPrecio: $${precio}\nHora: ${new Date().toLocaleTimeString()}\nPara aceptar, responde: ACEPTAR ${viajeId}`,
+                    from: "whatsapp:+14155238886",
+                    to: telefonoWhatsApp
+                });
+                
+                console.log(`   [NOTIFICADO] ${taxista.nombre} (${taxista.telefono})`);
+                
+            } catch (error) {
+                console.error(`   [ERROR] Notificando ${taxista.nombre}:`, error.message);
+            }
+        }
+        
+        console.log("[COMPLETADO] Notificaciones enviadas");
+        
+    } catch (error) {
+        console.error("[ERROR CRITICO] en notificarTaxistas:", error.message);
+    }
+}
+
+// ========== WEBHOOK PRINCIPAL ==========
 app.post("/whatsapp-webhook", async (req, res) => {
     console.log(`\n[MENSAJE RECIBIDO] de ${req.body.From}: ${req.body.Body || "(ubicacion)"}`);
     
@@ -176,6 +225,9 @@ app.post("/whatsapp-webhook", async (req, res) => {
                     
                     console.log(`[VIAJE CONFIRMADO] #${viaje.id} por ${from}`);
                     
+                    // ✅ NOTIFICAR A TAXISTAS (NUEVO)
+                    await notificarTaxistas(viaje.id, userState.datos.destino.toUpperCase(), viaje.precio);
+                    
                     await enviarWhatsApp(from,
                         `✅ *TAXI CONFIRMADO* #${viaje.id}\n\n` +
                         `📋 *Detalles:*\n` +
@@ -203,14 +255,15 @@ app.post("/whatsapp-webhook", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
-    res.send("🚕 Bot Taxi Campeche - VERSION FINAL CORREGIDA");
+    res.send("🚕 Bot Taxi Campeche - CON NOTIFICACIONES A TAXISTAS");
 });
 
 app.listen(PORT, () => {
     console.log("=".repeat(60));
-    console.log("🚀 BOT FINAL CORREGIDO - INICIADO");
+    console.log("🚀 BOT CON NOTIFICACIONES - INICIADO");
     console.log(`📡 Puerto: ${PORT}`);
     console.log("👉 Envia 'hola' al bot para probar");
+    console.log("👉 Los taxistas recibiran notificaciones de nuevos viajes");
     console.log("=".repeat(60));
 });
 
